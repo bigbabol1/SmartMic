@@ -92,6 +92,22 @@ api:
                   id: status_led
                   effect: none
               - voice_assistant.start:
+    - service: end_persistent
+      then:
+        - logger.log: "End persistent conversation via API"
+        - voice_assistant.stop:
+        - delay: 200ms
+        - light.turn_off: status_led
+        - text_sensor.template.publish:
+            id: satellite_state
+            state: "Bereit"
+        - if:
+            condition:
+              and:
+                - switch.is_off: mic_mute
+                - switch.is_on: wakeword_detection_enable
+            then:
+              - micro_wake_word.start:
 
 ota:
   - platform: esphome
@@ -229,8 +245,11 @@ voice_assistant:
                 and:
                   - switch.is_off: mic_mute
                   - switch.is_on: wakeword_detection_enable
+                  - switch.is_off: persistent_conversation
               then:
                 - micro_wake_word.start:
+              else:
+                - logger.log: "Persistent mode ON — skip wake restart, mic_to_mp drives re-listen"
         else:
           - logger.log: "VA still running — continue conversation, skip wake restart"
 
@@ -279,6 +298,13 @@ switch:
             switch.is_on: wakeword_detection_enable
           then:
             - micro_wake_word.start:
+
+  - platform: template
+    name: "Persistent Conversation"
+    id: persistent_conversation
+    icon: mdi:repeat
+    restore_mode: RESTORE_DEFAULT_ON
+    optimistic: true
 
   - platform: template
     name: "Wake Word Detection"
