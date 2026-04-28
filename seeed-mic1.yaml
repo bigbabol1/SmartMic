@@ -254,24 +254,46 @@ voice_assistant:
           - logger.log: "VA still running — continue conversation, skip wake restart"
 
   on_error:
-    - logger.log: "Pipeline error — recovering"
-    - light.turn_on:
-        id: status_led
-        effect: "error_flash"
-    - text_sensor.template.publish:
-        id: satellite_state
-        state: "Fehler"
-    - delay: 5s
-    - light.turn_off: status_led
-    - voice_assistant.stop:
-    - delay: 3s
+    - logger.log:
+        format: "Pipeline error — code=%s msg=%s"
+        args: [code.c_str(), message.c_str()]
     - if:
         condition:
           and:
+            - switch.is_on: persistent_conversation
             - switch.is_off: mic_mute
             - switch.is_on: wakeword_detection_enable
+            - lambda: 'return std::string(code) == "stt-no-text-recognized";'
         then:
-          - micro_wake_word.start:
+          - logger.log: "Persistent mode: STT silent — quietly re-arming listen"
+          - voice_assistant.stop:
+          - delay: 200ms
+          - text_sensor.template.publish:
+              id: satellite_state
+              state: "Hört zu"
+          - light.turn_on:
+              id: status_led
+              effect: none
+          - voice_assistant.start:
+        else:
+          - light.turn_on:
+              id: status_led
+              effect: "error_flash"
+          - text_sensor.template.publish:
+              id: satellite_state
+              state: "Fehler"
+          - delay: 5s
+          - light.turn_off: status_led
+          - voice_assistant.stop:
+          - delay: 3s
+          - if:
+              condition:
+                and:
+                  - switch.is_off: mic_mute
+                  - switch.is_on: wakeword_detection_enable
+                  - switch.is_off: persistent_conversation
+              then:
+                - micro_wake_word.start:
 
 # ── UI controls ──
 switch:
