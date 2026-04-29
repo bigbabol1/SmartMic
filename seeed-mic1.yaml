@@ -245,11 +245,8 @@ voice_assistant:
                 and:
                   - switch.is_off: mic_mute
                   - switch.is_on: wakeword_detection_enable
-                  - switch.is_off: persistent_conversation
               then:
                 - micro_wake_word.start:
-              else:
-                - logger.log: "Persistent mode ON — skip wake restart, mic_to_mp drives re-listen"
         else:
           - logger.log: "VA still running — continue conversation, skip wake restart"
 
@@ -291,7 +288,6 @@ voice_assistant:
                 and:
                   - switch.is_off: mic_mute
                   - switch.is_on: wakeword_detection_enable
-                  - switch.is_off: persistent_conversation
               then:
                 - micro_wake_word.start:
 
