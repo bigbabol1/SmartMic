@@ -1,7 +1,11 @@
 # ══════════════════════════════════════════════════════
 #  Seeed-Mic1 — Assist Satellite
-#  XIAO ESP32-S3 · 2× INMP441 I2S · on-device microWakeWord
+#  XIAO ESP32-S3 · 1× I2S MEMS mic (INMP441 or ICS-43434, drop-in compatible) · on-device microWakeWord
 # ══════════════════════════════════════════════════════
+
+substitutions:
+  # Set to "INMP441" or "ICS-43434" — purely informational; ESPHome I2S config is identical for both.
+  mic_module: "INMP441"
 
 esphome:
   name: seeed-mic1
@@ -37,6 +41,7 @@ esphome:
             id(g_loudness) = 0.2f * dbfs + 0.8f * id(g_loudness);
           });
           ESP_LOGI("boot", "Loudness callback registered");
+          ESP_LOGI("boot", "Microphone module: %s", "${mic_module}");
       - delay: 10s
       - light.turn_off: status_led
       - if:
@@ -161,7 +166,7 @@ i2s_audio:
   i2s_lrclk_pin: GPIO8   # WS
   i2s_bclk_pin:  GPIO7   # BCLK
 
-# ── Microphone (left INMP441, mono — wake/STT prefer mono) ──
+# ── Microphone (mono, right channel via L/R→VDD; INMP441 or ICS-43434) ──
 microphone:
   - platform: i2s_audio
     id: mic_array

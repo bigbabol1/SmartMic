@@ -6,7 +6,7 @@ ESPHome firmware for DIY voice satellites paired with Home Assistant Assist.
 
 | File | Hardware | Wake word | Notes |
 |------|----------|-----------|-------|
-| `seeed-mic1.yaml` | XIAO ESP32-S3 (8 MB flash, octal PSRAM) + INMP441 I2S mic (mono, right channel) + onboard LED on GPIO4 | `hey_jarvis` (microWakeWord, on-device) | No onboard speaker — TTS routed through [Mic to MediaPlayer](https://github.com/bigbabol1/HomeAssistant_mic_to_mediaplayer) to an external `media_player`. |
+| `seeed-mic1.yaml` | XIAO ESP32-S3 (8 MB flash, octal PSRAM) + 1× I2S MEMS mic (**INMP441** or **ICS-43434**, drop-in pin-compatible, mono on right channel) + onboard LED on GPIO4 | `hey_jarvis` (microWakeWord, on-device) | No onboard speaker — TTS routed through [Mic to MediaPlayer](https://github.com/bigbabol1/HomeAssistant_mic_to_mediaplayer) to an external `media_player`. New builds use ICS-43434 (better SNR + built-in HPF); legacy boards keep INMP441. Set the `mic_module` substitution at the top of the YAML to record which is fitted. |
 
 ## Pinout (XIAO ESP32-S3)
 
@@ -16,6 +16,17 @@ ESPHome firmware for DIY voice satellites paired with Home Assistant Assist.
 | GPIO8 | I2S LRCLK / WS |
 | GPIO9 | I2S DIN (mic data) |
 | GPIO4 | Status LED (active low) |
+
+## Microphone modules (drop-in compatible)
+
+Both supported MEMS mics share the I2S Philips protocol, 24-bit MSB in 32-bit frame, and identical 6-pin layout. No firmware changes are required when swapping — only update the `mic_module` substitution at the top of `seeed-mic1.yaml` for log clarity.
+
+| Module | SNR (dBA) | Sensitivity | Built-in HPF | Notes |
+|--------|-----------|-------------|--------------|-------|
+| INMP441 | 61 | -26 dBFS @ 94 dB SPL | No | Original board fitment; small DC offset present in raw stream. |
+| ICS-43434 | 65 | -26 dBFS @ 94 dB SPL | Yes (~80 Hz) | Default for new builds; cleaner low-frequency baseline, slightly better wake-word recall in noisy rooms. |
+
+**Wiring (both):** L/R pad → VDD selects the right slot (matches `channel: right` in YAML). Tying L/R → GND would select the left slot — change `channel: left` if doing so.
 
 ## Companion stack
 
