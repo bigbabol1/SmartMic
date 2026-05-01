@@ -6,6 +6,11 @@
 substitutions:
   # Set to "INMP441" or "ICS-43434" — purely informational; ESPHome I2S config is identical for both.
   mic_module: "INMP441"
+  # Home Assistant assist_satellite entity id of THIS device. Used by the voice timer
+  # hooks below to tell mic_to_mediaplayer.announce which Mic2MP instance should
+  # speak the timer ring on its configured speaker. Override per device when the
+  # ESPHome name differs from "seeed-mic1".
+  satellite_entity_id: "assist_satellite.seeed_mic1"
 
 esphome:
   name: seeed-mic1
@@ -232,6 +237,61 @@ voice_assistant:
     - text_sensor.template.publish:
         id: satellite_state
         state: "Bereit"
+
+  # ── Voice-timer hooks ──
+  # Pattern-B satellite has no local speaker, so the timer ring is routed to the
+  # Google/MA speaker via the mic_to_mediaplayer.announce service (added in
+  # Mic2MP v1.5.0). Mic2MP knows which media_player this satellite is bound to,
+  # so the YAML stays speaker-agnostic — only the assist_satellite entity id
+  # of THIS device is needed (see substitutions.satellite_entity_id).
+  on_timer_started:
+    - logger.log:
+        level: INFO
+        format: "Timer started: %s (%us)"
+        args: [timer.name.c_str(), (unsigned int) timer.total_seconds]
+    - text_sensor.template.publish:
+        id: satellite_state
+        state: "Timer läuft"
+
+  on_timer_finished:
+    - logger.log:
+        level: INFO
+        format: "Timer finished: %s"
+        args: [timer.name.c_str()]
+    - light.turn_on:
+        id: status_led
+        effect: "blink_fast"
+    - text_sensor.template.publish:
+        id: satellite_state
+        state: "Timer fertig"
+    - homeassistant.service:
+        service: mic_to_mediaplayer.announce
+        data:
+          satellite_entity_id: ${satellite_entity_id}
+        data_template:
+          message: '{% if timer_name %}Timer {{ timer_name }} ist fertig.{% else %}Timer ist fertig.{% endif %}'
+        variables:
+          timer_name: !lambda 'return timer.name;'
+    - delay: 8s
+    - light.turn_off: status_led
+    - text_sensor.template.publish:
+        id: satellite_state
+        state: "Bereit"
+
+  on_timer_cancelled:
+    - logger.log:
+        level: INFO
+        format: "Timer cancelled: %s"
+        args: [timer.name.c_str()]
+    - text_sensor.template.publish:
+        id: satellite_state
+        state: "Bereit"
+
+  on_timer_updated:
+    - logger.log:
+        level: INFO
+        format: "Timer updated: %s (%us left)"
+        args: [timer.name.c_str(), (unsigned int) timer.seconds_left]
 
   on_end:
     - logger.log: "Pipeline end"
