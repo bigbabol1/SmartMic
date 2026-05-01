@@ -10,7 +10,7 @@ substitutions:
   # hooks below to tell mic_to_mediaplayer.announce which Mic2MP instance should
   # speak the timer ring on its configured speaker. Override per device when the
   # ESPHome name differs from "seeed-mic1".
-  satellite_entity_id: "assist_satellite.seeed_mic1"
+  satellite_entity_id: "assist_satellite.seeed_mic1_assist_satellit"
 
 esphome:
   name: seeed-mic1
