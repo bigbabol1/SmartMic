@@ -40,22 +40,30 @@ jobs:
           echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
 
       - name: Generate secrets.yaml from GitHub Secrets
+        env:
+          WIFI_SSID:          ${{ secrets.WIFI_SSID }}
+          WIFI_PASSWORD:      ${{ secrets.WIFI_PASSWORD }}
+          AP_PASSWORD:        ${{ secrets.AP_PASSWORD }}
+          API_ENCRYPTION_KEY: ${{ secrets.API_ENCRYPTION_KEY }}
+          OTA_PASSWORD:       ${{ secrets.OTA_PASSWORD }}
         run: |
-          cat > secrets.yaml <<EOF
-          wifi_ssid: "${{ secrets.WIFI_SSID }}"
-          wifi_password: "${{ secrets.WIFI_PASSWORD }}"
-          ap_password: "${{ secrets.AP_PASSWORD }}"
-          api_encryption_key: "${{ secrets.API_ENCRYPTION_KEY }}"
-          ota_password: "${{ secrets.OTA_PASSWORD }}"
-          EOF
-          # Sanity: fail loudly if any secret is missing
-          for k in WIFI_SSID WIFI_PASSWORD AP_PASSWORD API_ENCRYPTION_KEY OTA_PASSWORD; do
-            v=$(grep -i "^${k,,}:" secrets.yaml | cut -d'"' -f2)
-            if [ -z "$v" ]; then
-              echo "::error::Repository secret $k is empty"
-              exit 1
-            fi
-          done
+          # Use python so secret values containing $, ", \, etc. survive verbatim.
+          # Bash heredocs (even with quoted EOF) plus GHA's pre-substitution of ${{ }}
+          # leave the door open for $1/$0 expansion in bash; python sidesteps that.
+          python3 <<'PY'
+          import json, os, pathlib
+          keys = ["WIFI_SSID","WIFI_PASSWORD","AP_PASSWORD","API_ENCRYPTION_KEY","OTA_PASSWORD"]
+          out_keys = ["wifi_ssid","wifi_password","ap_password","api_encryption_key","ota_password"]
+          lines = []
+          for env_k, yaml_k in zip(keys, out_keys):
+              v = os.environ.get(env_k, "")
+              if not v:
+                  raise SystemExit(f"::error::Repository secret {env_k} is empty")
+              # YAML double-quoted string: only " and \ need escaping
+              esc = v.replace("\\", "\\\\").replace('"', '\\"')
+              lines.append(f'{yaml_k}: "{esc}"')
+          pathlib.Path("secrets.yaml").write_text("\n".join(lines) + "\n")
+          PY
 
       - name: Compile firmware via ESPHome docker
         run: |
