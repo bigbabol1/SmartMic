@@ -82,8 +82,9 @@ logger:
   level: INFO
 
 api:
-  encryption:
-    key: !secret api_encryption_key
+  # No encryption: SmartMic ships as open-source fleet firmware. Adding the
+  # key to a public release would make it shared/public anyway, so it offers
+  # no real protection. Trust the LAN — segment via your router if needed.
   services:
     - service: start_follow_up
       then:
@@ -97,7 +98,7 @@ api:
               - micro_wake_word.stop:
               - text_sensor.template.publish:
                   id: satellite_state
-                  state: "Hört zu"
+                  state: "Listening"
               - light.turn_on:
                   id: status_led
                   effect: none
@@ -110,7 +111,7 @@ api:
         - light.turn_off: status_led
         - text_sensor.template.publish:
             id: satellite_state
-            state: "Bereit"
+            state: "Ready"
         - if:
             condition:
               and:
@@ -216,7 +217,7 @@ micro_wake_word:
         effect: none
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Hört zu"
+        state: "Listening"
     - voice_assistant.start:
         wake_word: !lambda 'return wake_word;'
 
@@ -236,7 +237,7 @@ voice_assistant:
         effect: "blink_fast"
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Verarbeite"
+        state: "Processing"
 
   on_tts_start:
     - logger.log: "TTS start"
@@ -245,13 +246,13 @@ voice_assistant:
         effect: "blink_slow"
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Antwortet"
+        state: "Responding"
 
   on_tts_end:
     - logger.log: "TTS end"
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Bereit"
+        state: "Ready"
 
   # ── Voice-timer hooks ──
   on_timer_started:
@@ -261,7 +262,7 @@ voice_assistant:
         args: [timer.name.c_str(), (unsigned int) timer.total_seconds]
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Timer läuft"
+        state: "Timer running"
 
   on_timer_finished:
     - logger.log:
@@ -273,12 +274,12 @@ voice_assistant:
         effect: "blink_fast"
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Timer fertig"
+        state: "Timer finished"
     - homeassistant.service:
         service: mic_to_mediaplayer.announce
         data_template:
           satellite_entity_id: "{{ sat }}"
-          message: '{% if timer_name %}Timer {{ timer_name }} ist fertig.{% else %}Timer ist fertig.{% endif %}'
+          message: '{% if timer_name %}Timer {{ timer_name }} is up.{% else %}Timer is up.{% endif %}'
         variables:
           sat: !lambda |-
             std::string n = App.get_name();
@@ -289,7 +290,7 @@ voice_assistant:
     - light.turn_off: status_led
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Bereit"
+        state: "Ready"
 
   on_timer_cancelled:
     - logger.log:
@@ -298,7 +299,7 @@ voice_assistant:
         args: [timer.name.c_str()]
     - text_sensor.template.publish:
         id: satellite_state
-        state: "Bereit"
+        state: "Ready"
 
   on_timer_updated:
     - logger.log:
@@ -317,7 +318,7 @@ voice_assistant:
           - light.turn_off: status_led
           - text_sensor.template.publish:
               id: satellite_state
-              state: "Bereit"
+              state: "Ready"
           - if:
               condition:
                 and:
@@ -345,7 +346,7 @@ voice_assistant:
           - delay: 200ms
           - text_sensor.template.publish:
               id: satellite_state
-              state: "Hört zu"
+              state: "Listening"
           - light.turn_on:
               id: status_led
               effect: none
@@ -356,7 +357,7 @@ voice_assistant:
               effect: "error_flash"
           - text_sensor.template.publish:
               id: satellite_state
-              state: "Fehler"
+              state: "Error"
           - delay: 5s
           - light.turn_off: status_led
           - voice_assistant.stop:
@@ -372,7 +373,7 @@ voice_assistant:
 # ── UI controls ──
 switch:
   - platform: template
-    name: "Mikrofon stumm"
+    name: "Microphone mute"
     id: mic_mute
     icon: mdi:microphone-off
     restore_mode: RESTORE_DEFAULT_OFF
@@ -384,11 +385,11 @@ switch:
       - light.turn_off: status_led
       - text_sensor.template.publish:
           id: satellite_state
-          state: "Stumm"
+          state: "Muted"
     turn_off_action:
       - text_sensor.template.publish:
           id: satellite_state
-          state: "Bereit"
+          state: "Ready"
       - if:
           condition:
             switch.is_on: wakeword_detection_enable
@@ -421,7 +422,7 @@ switch:
             - micro_wake_word.start:
             - text_sensor.template.publish:
                 id: satellite_state
-                state: "Bereit"
+                state: "Ready"
     turn_off_action:
       - globals.set:
           id: g_wakeword_detection_state
@@ -431,11 +432,11 @@ switch:
       - voice_assistant.stop:
       - text_sensor.template.publish:
           id: satellite_state
-          state: "Aus"
+          state: "Off"
 
 number:
   - platform: template
-    name: "Geräuschunterdrückung"
+    name: "Noise suppression"
     id: noise_suppression
     icon: mdi:waveform
     min_value: 0
@@ -449,7 +450,7 @@ number:
           id(satellite).set_noise_suppression_level((int)x);
           id(noise_suppression).publish_state(x);
       - logger.log:
-          format: "Geräuschunterdrückung: %d"
+          format: "Noise suppression: %d"
           args: ['(int)x']
 
   - platform: template
@@ -471,7 +472,7 @@ number:
           args: ['(int)x']
 
   - platform: template
-    name: "Mikrofon-Verstärkung"
+    name: "Microphone gain"
     id: volume_amplifier
     icon: mdi:volume-high
     min_value: 0.5
@@ -485,7 +486,7 @@ number:
           id(satellite).set_volume_multiplier(x);
           id(volume_amplifier).publish_state(x);
       - logger.log:
-          format: "Verstärkung: %.1f"
+          format: "Gain: %.1f"
           args: ['x']
 
   - platform: template
@@ -522,12 +523,12 @@ number:
           id(g_sliding_window) = (int)x;
           id(sliding_window_ctrl).publish_state(x);
       - logger.log:
-          format: "Sliding Window: %d (YAML-Edit + Recompile erforderlich)"
+          format: "Sliding Window: %d (YAML edit + recompile required)"
           args: ['(int)x']
 
 button:
   - platform: restart
-    name: "Neustart"
+    name: "Restart"
     icon: mdi:restart
     entity_category: config
 
@@ -537,16 +538,16 @@ text_sensor:
     id: satellite_state
     icon: mdi:assistant
     lambda: |-
-      return {"Bereit"};
+      return {"Ready"};
 
 binary_sensor:
   - platform: status
-    name: "Verbindungsstatus"
+    name: "Connection status"
     entity_category: diagnostic
 
 sensor:
   - platform: template
-    name: "Mikrofon Loudness (dBFS)"
+    name: "Microphone loudness (dBFS)"
     id: mic_loudness
     icon: mdi:volume-vibrate
     unit_of_measurement: "dBFS"
