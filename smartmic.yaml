@@ -147,8 +147,9 @@ http_request:
 update:
   - platform: http_request
     name: "Firmware update"
+    id: firmware_update
     source: "https://raw.githubusercontent.com/bigbabol1/SmartMic/main/manifest.json"
-    update_interval: 6h
+    update_interval: 30min
 
 # ── Persistent globals ──
 globals:
@@ -531,6 +532,14 @@ button:
     name: "Restart"
     icon: mdi:restart
     entity_category: config
+
+  - platform: template
+    name: "Check for updates"
+    icon: mdi:cloud-download
+    entity_category: config
+    on_press:
+      - logger.log: "Manual update check requested"
+      - component.update: firmware_update    # re-fetch manifest, surface latest in HA
 
 text_sensor:
   - platform: template
