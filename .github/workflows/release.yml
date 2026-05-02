@@ -1,0 +1,109 @@
+name: Build & release firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (no v prefix, e.g. 7.2.0)'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VER="${{ github.event.inputs.version }}"
+          else
+            VER="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VER}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate secrets.yaml from GitHub Secrets
+        run: |
+          cat > secrets.yaml <<EOF
+          wifi_ssid: "${{ secrets.WIFI_SSID }}"
+          wifi_password: "${{ secrets.WIFI_PASSWORD }}"
+          ap_password: "${{ secrets.AP_PASSWORD }}"
+          api_encryption_key: "${{ secrets.API_ENCRYPTION_KEY }}"
+          ota_password: "${{ secrets.OTA_PASSWORD }}"
+          EOF
+          # Sanity: fail loudly if any secret is missing
+          for k in WIFI_SSID WIFI_PASSWORD AP_PASSWORD API_ENCRYPTION_KEY OTA_PASSWORD; do
+            v=$(grep -i "^${k,,}:" secrets.yaml | cut -d'"' -f2)
+            if [ -z "$v" ]; then
+              echo "::error::Repository secret $k is empty"
+              exit 1
+            fi
+          done
+
+      - name: Compile firmware via ESPHome docker
+        run: |
+          docker run --rm -v "$PWD:/config" -w /config \
+            ghcr.io/esphome/esphome:latest compile smartmic.yaml
+
+      - name: Stage release artifacts
+        id: stage
+        run: |
+          BUILD_DIR=.esphome/build/smartmic/.pioenvs/smartmic
+          cp "$BUILD_DIR/firmware.ota.bin"     firmware.ota.bin
+          cp "$BUILD_DIR/firmware.factory.bin" firmware.factory.bin
+          MD5=$(md5sum firmware.ota.bin | cut -d' ' -f1)
+          echo "md5=${MD5}" >> "$GITHUB_OUTPUT"
+
+      - name: Update manifest.json
+        env:
+          REPO: ${{ github.repository }}
+          VER: ${{ steps.ver.outputs.version }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          MD5: ${{ steps.stage.outputs.md5 }}
+        run: |
+          URL="https://github.com/${REPO}/releases/download/${TAG}/firmware.ota.bin"
+          jq --arg ver "$VER" --arg md5 "$MD5" --arg url "$URL" \
+            '.version=$ver | .builds[0].ota.md5=$md5 | .builds[0].ota.path=$url' \
+            manifest.json > manifest.tmp
+          mv manifest.tmp manifest.json
+          cat manifest.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            firmware.ota.bin
+            firmware.factory.bin
+            manifest.json
+
+      - name: Commit updated manifest.json to main
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if git diff --cached --quiet; then
+            echo "manifest.json unchanged — skipping commit"
+          else
+            git commit -m "release: bump manifest to ${{ steps.ver.outputs.tag }}"
+            git push origin HEAD:main
+          fi

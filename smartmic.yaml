@@ -83,7 +83,7 @@ logger:
 
 api:
   encryption:
-    key: "kqGYpJn3p9QLppYJJNu20T/LoO1chc2KZldex6uTlRw="
+    key: !secret api_encryption_key
   services:
     - service: start_follow_up
       then:
@@ -121,7 +121,8 @@ api:
 
 ota:
   - platform: esphome
-    password: "d860a52ac8b75a38c36046a202cca6b3"
+    password: !secret ota_password
+  - platform: http_request                 # required by update.http_request below
 
 wifi:
   ssid: !secret wifi_ssid
@@ -130,9 +131,23 @@ wifi:
   fast_connect: true
   ap:
     ssid: "SmartMic Fallback Hotspot"
-    password: "N2W8f77HdBG6"
+    password: !secret ap_password
 
 captive_portal:
+
+# ── OTA from GitHub releases ──
+# Devices poll the manifest below and surface an "update available" entity in HA.
+# CI/CD: tag `vX.Y` on github.com/bigbabol1/SmartMic → GitHub Action compiles +
+# publishes a release with firmware.ota.bin + updates manifest.json on main.
+http_request:
+  verify_ssl: true                       # GitHub uses well-known CAs (Mozilla bundle in ESP-IDF)
+  timeout: 30s
+
+update:
+  - platform: http_request
+    name: "Firmware update"
+    source: "https://raw.githubusercontent.com/bigbabol1/SmartMic/main/manifest.json"
+    update_interval: 6h
 
 # ── Persistent globals ──
 globals:
