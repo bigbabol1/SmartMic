@@ -47,9 +47,9 @@ jobs:
           API_ENCRYPTION_KEY: ${{ secrets.API_ENCRYPTION_KEY }}
           OTA_PASSWORD: ${{ secrets.OTA_PASSWORD }}
         run: |
-          # Use python so secret values containing $, ", \, etc. survive verbatim.
-          # Bash heredocs (even with quoted EOF) plus GHA's pre-substitution of ${{ }}
-          # leave the door open for $1/$0 expansion in bash; python sidesteps that.
+          # Secrets are passed via env (no shell parsing); python writes secrets.yaml
+          # with proper YAML escaping. Avoids bash heredoc $-expansion that broke
+          # WIFI_PASSWORD in v8.0 (Gdlv40Xx%$1_78 -> $1 ate to empty).
           python3 <<'PY'
           import json, os, pathlib
           keys = ["WIFI_SSID","WIFI_PASSWORD","AP_PASSWORD","API_ENCRYPTION_KEY","OTA_PASSWORD"]
