@@ -10,11 +10,17 @@
 substitutions:
   # Set to "INMP441" or "ICS-43434" — purely informational; ESPHome I2S config is identical for both.
   mic_module: "INMP441"
+  # Firmware release version shown in HA's update entity as "Installed Version".
+  # CI overrides this via `-s fw_version <tag>` so the installed value matches manifest.json.
+  fw_version: "0.0.0-dev"
 
 esphome:
   name: smartmic
   name_add_mac_suffix: true
   friendly_name: SmartMic
+  project:
+    name: bigbabol1.smartmic
+    version: "${fw_version}"
   on_boot:
     priority: -100
     then:

@@ -65,9 +65,11 @@ jobs:
           PY
 
       - name: Compile firmware via ESPHome docker
+        env:
+          VER: ${{ steps.ver.outputs.version }}
         run: |
-          docker run --rm -v "$PWD:/config" -w /config \
-            ghcr.io/esphome/esphome:latest compile smartmic.yaml
+          docker run --rm -e VER -v "$PWD:/config" -w /config \
+            ghcr.io/esphome/esphome:latest -s fw_version "$VER" compile smartmic.yaml
 
       - name: Stage release artifacts
         id: stage
