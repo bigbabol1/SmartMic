@@ -4,10 +4,11 @@ ESPHome firmware for DIY voice satellites paired with Home Assistant Assist.
 
 ## Devices
 
-| File | Role | Hardware | Wake word | Notes |
-|------|------|----------|-----------|-------|
-| `smartmic.yaml` | **Fleet firmware** — single image flashes to any number of SmartMic units | XIAO ESP32-S3 (8 MB flash, octal PSRAM) + 1× I2S MEMS mic (**INMP441** or **ICS-43434**, drop-in pin-compatible, mono on left channel — L/R → GND) + onboard LED on GPIO4 | `hey_jarvis` (microWakeWord, on-device) | `name_add_mac_suffix: true` → each device auto-names `smartmic-<last6mac>`. Timer ring derives `satellite_entity_id` at runtime from `App.get_name()`, so one .bin works for the whole fleet. TTS via [Mic to MediaPlayer](https://github.com/bigbabol1/HomeAssistant_mic_to_mediaplayer). |
-| `seeed-mic1.yaml` | Legacy single-device firmware (kept for the deployed `seeed-mic1` unit) | Same hardware, **right channel** (L/R → VDD) | `hey_jarvis` | Hardcoded name `seeed-mic1` + hardcoded `satellite_entity_id`. New builds should use `smartmic.yaml` instead. |
+`smartmic.yaml` is the single fleet firmware — one image flashes to every SmartMic unit.
+
+| Hardware | Wake word | Notes |
+|----------|-----------|-------|
+| XIAO ESP32-S3 (8 MB flash, octal PSRAM) + 1× I2S MEMS mic (**INMP441** or **ICS-43434**, drop-in pin-compatible, mono on left channel — L/R → GND) + onboard LED on GPIO4 | `hey_jarvis` (microWakeWord, on-device) | `name_add_mac_suffix: true` → each device auto-names `smartmic-<last6mac>`. Timer ring derives `satellite_entity_id` at runtime from `App.get_name()`, so one .bin works for the whole fleet. TTS via [Mic to MediaPlayer](https://github.com/bigbabol1/HomeAssistant_mic_to_mediaplayer). |
 
 ## Pinout (XIAO ESP32-S3)
 
@@ -27,7 +28,7 @@ Both supported MEMS mics share the I2S Philips protocol, 24-bit MSB in 32-bit fr
 | INMP441 | 61 | -26 dBFS @ 94 dB SPL | No | Original board fitment; small DC offset present in raw stream. |
 | ICS-43434 | 65 | -26 dBFS @ 94 dB SPL | Yes (~80 Hz) | Default for new builds; cleaner low-frequency baseline, slightly better wake-word recall in noisy rooms. |
 
-**Wiring:** L/R pad → VDD selects the right slot (`channel: right` — used by legacy `seeed-mic1.yaml`). L/R → GND selects the left slot (`channel: left` — standard for new builds, used by `smartmic.yaml`).
+**Wiring:** L/R pad → GND selects the left slot (`channel: left` — what `smartmic.yaml` expects). L/R → VDD selects the right slot; only use that if you also change `channel: right` in the YAML.
 
 ## Companion stack
 
@@ -53,9 +54,9 @@ Two switches let you mute the mic (`Mikrofon stumm`) or disable wake-word detect
 
 ## Build / flash
 
-The YAMLs are intended for the ESPHome Home Assistant add-on:
+The YAML is intended for the ESPHome Home Assistant add-on:
 
-1. Place `smartmic.yaml` (or `seeed-mic1.yaml` for the legacy unit) in `/config/esphome/`.
+1. Place `smartmic.yaml` in `/config/esphome/`.
 2. Provide `wifi_ssid` and `wifi_password` in `/config/esphome/secrets.yaml`.
 3. ESPHome dashboard → device → **Install** (USB for first flash, OTA afterwards).
 
@@ -81,4 +82,4 @@ docker run --rm -v "$PWD:/config" -w /config ghcr.io/esphome/esphome:latest comp
 - **Loudness sensor** — a callback on the I2S mic stream computes a smoothed dBFS RMS estimate, surfaced as `sensor.mikrofon_loudness_dbfs` for diagnostics.
 - **State text sensor** — `Bereit` / `Hört zu` / `Verarbeite` / `Antwortet` / `Stumm` / `Aus` / `Fehler` for use in dashboards.
 - **Voice timer hooks** — `on_timer_started/finished/cancelled/updated` integrate with the HA built-in voice timer (`HassStartTimer` etc.). On `finished`, the firmware calls `mic_to_mediaplayer.announce` with the timer name; Mic2MP routes the speech to the bound speaker (with `announce: true` so any current music is ducked).
-- **Fleet naming (`smartmic.yaml`)** — `name: smartmic` + `name_add_mac_suffix: true` produces `smartmic-<last6mac>` per device. The timer hook resolves `satellite_entity_id` at runtime via a lambda that reads `App.get_name()` and substitutes `-` → `_`, yielding `assist_satellite.<runtime_name>_assist_satellit` (HA German `object_id_base` "Assist-Satellit"). One firmware image, N devices, no per-device recompile.
+- **Fleet naming** — `name: smartmic` + `name_add_mac_suffix: true` produces `smartmic-<last6mac>` per device. The timer hook resolves `satellite_entity_id` at runtime via a lambda that reads `App.get_name()` and substitutes `-` → `_`, yielding `assist_satellite.<runtime_name>_assist_satellit` (HA German `object_id_base` "Assist-Satellit"). One firmware image, N devices, no per-device recompile.
