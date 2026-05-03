@@ -8,7 +8,7 @@
       "chipFamily": "ESP32-S3",
       "ota": {
         "md5": "433cc2c1185d753bc51265fc4b657e0b",
-        "path": "https://github.com/bigbabol1/SmartMic/releases/download/v8.2.1/firmware.ota.bin"
+        "path": "http://192.168.0.231:8123/local/smartmic_v8.2.1.ota.bin"
       }
     }
   ]
