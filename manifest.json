@@ -1,14 +1,14 @@
 {
   "name": "SmartMic",
-  "version": "8.1.2",
+  "version": "8.2.0",
   "home_assistant_domain": "esphome",
   "new_install_prohibited_software": [],
   "builds": [
     {
       "chipFamily": "ESP32-S3",
       "ota": {
-        "md5": "8e3bc62d8343c99caa7cadc36b69e4ef",
-        "path": "https://github.com/bigbabol1/SmartMic/releases/download/v8.1.2/firmware.ota.bin"
+        "md5": "d88bc3a66b6f16dcf4d9cff91765a8c6",
+        "path": "https://github.com/bigbabol1/SmartMic/releases/download/v8.2.0/firmware.ota.bin"
       }
     }
   ]
