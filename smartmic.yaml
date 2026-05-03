@@ -577,7 +577,7 @@ output:
     id: led_out
     pin:
       number: GPIO4
-      inverted: true
+      inverted: false
 
 light:
   - platform: binary
