@@ -571,17 +571,12 @@ sensor:
     lambda: |-
       return id(g_loudness);
 
-# ── External LED (GPIO4) + onboard test LED (GPIO21) ──
+# ── External status LED (GPIO4 = XIAO silkscreen pad D3, active-low) ──
 output:
   - platform: gpio
     id: led_out
     pin:
       number: GPIO4
-      inverted: true
-  - platform: gpio
-    id: led_onboard_out
-    pin:
-      number: GPIO21         # XIAO ESP32-S3 onboard yellow user LED (LED_BUILTIN)
       inverted: true
 
 light:
@@ -618,9 +613,4 @@ light:
               duration: 100ms
             - state: false
               duration: 100ms
-  - platform: binary
-    id: onboard_led
-    name: "Onboard LED test"
-    entity_category: diagnostic
-    output: led_onboard_out
 
