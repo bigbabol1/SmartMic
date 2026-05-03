@@ -571,19 +571,29 @@ sensor:
     lambda: |-
       return id(g_loudness);
 
-# ── Onboard user LED (GPIO4, active-low) ──
+# ── External LED (GPIO4) + onboard test LED (GPIO21) ──
 output:
   - platform: gpio
     id: led_out
     pin:
       number: GPIO4
-      inverted: false
+      inverted: true
+  - platform: gpio
+    id: led_onboard_out
+    pin:
+      number: GPIO21         # XIAO ESP32-S3 onboard yellow user LED (LED_BUILTIN)
+      inverted: true
 
 light:
   - platform: binary
     id: status_led
     name: "Status LED"
     output: led_out
+  - platform: binary
+    id: onboard_led
+    name: "Onboard LED test"
+    entity_category: diagnostic
+    output: led_onboard_out
     effects:
       - strobe:
           name: "pulse_slow"
