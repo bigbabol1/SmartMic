@@ -149,6 +149,12 @@ captive_portal:
 http_request:
   verify_ssl: true                       # GitHub uses well-known CAs (Mozilla bundle in ESP-IDF)
   timeout: 30s
+  # v8.3.0: bump RX buffer to fit GitHub release 302 → objects.githubusercontent.com
+  # signed S3 URLs (~600+ chars). IDF esp_http_client default 512B overflows on the
+  # redirect Location header → "[E] HTTP_CLIENT: Out of buffer" → OTA fails.
+  # 4096 leaves headroom for future signed URL bloat.
+  buffer_size_rx: 4096
+  buffer_size_tx: 1024
 
 update:
   - platform: http_request
