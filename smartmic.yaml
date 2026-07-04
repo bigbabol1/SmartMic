@@ -197,8 +197,8 @@ globals:
 # ── I2S bus (shared) ──
 i2s_audio:
   id: i2s_bus
-  i2s_lrclk_pin: GPIO8   # WS
-  i2s_bclk_pin:  GPIO7   # BCLK
+  i2s_lrclk_pin: GPIO7   # WS
+  i2s_bclk_pin:  GPIO9   # BCLK
 
 # ── Microphone (INMP441, L/R → GND → left channel, mono) ──
 microphone:
@@ -206,7 +206,7 @@ microphone:
     id: mic_array
     i2s_audio_id: i2s_bus
     adc_type: external
-    i2s_din_pin: GPIO9
+    i2s_din_pin: GPIO8
     pdm: false
     bits_per_sample: 32bit
     channel: left

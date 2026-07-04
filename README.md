@@ -14,9 +14,9 @@ ESPHome firmware for DIY voice satellites paired with Home Assistant Assist.
 
 | GPIO | Silkscreen pad | Function |
 |------|----------------|----------|
-| GPIO7 | D8 | I2S BCLK |
-| GPIO8 | D9 | I2S LRCLK / WS |
-| GPIO9 | D10 | I2S DIN (mic data) |
+| GPIO7 | D8 | I2S LRCLK / WS |
+| GPIO8 | D9 | I2S DIN (mic data) |
+| GPIO9 | D10 | I2S BCLK |
 | GPIO4 | **D3** | External status LED (active-low: anode → 3V3 via resistor, cathode → pin) |
 
 > ⚠️ XIAO silkscreen labels (`D0…D10`) are **not** the GPIO numbers — D3 = GPIO4, D4 = GPIO5, etc. Solder to the pad whose silkscreen matches the second column above, not the GPIO number.
