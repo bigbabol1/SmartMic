@@ -209,7 +209,7 @@ microphone:
     i2s_din_pin: GPIO8
     pdm: false
     bits_per_sample: 32bit
-    channel: left
+    channel: right
 
 # ── On-device wake word (gates voice_assistant) ──
 micro_wake_word:
